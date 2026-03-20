@@ -1,0 +1,16 @@
+{
+  "name": "Chrono Healer",
+  "short_name": "Chrono Healer",
+  "description": "Intelligently schedule sleep, light, and caffeine to beat jet lag.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0E14",
+  "theme_color": "#6366F1",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

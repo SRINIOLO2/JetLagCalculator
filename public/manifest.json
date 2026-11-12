@@ -1,16 +1,20 @@
 {
-  "name": "Chrono Healer",
+  "name": "Chrono Healer — In-Flight Jet Lag Companion",
   "short_name": "Chrono Healer",
-  "description": "Intelligently schedule sleep, light, and caffeine to beat jet lag.",
-  "start_url": "/",
+  "description": "Offline-first circadian rhythm, light, melatonin, caffeine, and sleep planner for air travel.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0B0E14",
+  "orientation": "portrait-primary",
+  "background_color": "#07090E",
   "theme_color": "#6366F1",
+  "categories": ["travel", "health", "lifestyle", "utilities"],
   "icons": [
     {
-      "src": "/favicon.ico",
+      "src": "./icon.svg",
       "sizes": "any",
-      "type": "image/x-icon"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

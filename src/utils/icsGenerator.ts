@@ -1,34 +1,65 @@
-import { JetLagEvent } from './jetLagAlgorithm';
+import { EventType, JetLagEvent } from './jetLagAlgorithm';
 
 function formatICSDate(date: Date): string {
   return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 }
 
-export function generateICS(events: JetLagEvent[]): string {
-  let icsData = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Chrono Healer//Jet Lag Calculator//EN\nCALSCALE:GREGORIAN\n";
+function escapeICSText(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
 
-  events.forEach(event => {
-    icsData += "BEGIN:VEVENT\n";
-    icsData += `UID:${event.id}@chronohealer.com\n`;
-    icsData += `DTSTAMP:${formatICSDate(new Date())}\n`;
-    icsData += `DTSTART:${formatICSDate(event.startTime)}\n`;
-    icsData += `DTEND:${formatICSDate(event.endTime)}\n`;
-    
-    // Add emojis to summaries for better visibility in Google Calendar
-    let summary = event.description;
-    switch(event.type) {
-      case 'SLEEP': summary = `🛏️ ${summary}`; break;
-      case 'SEEK_LIGHT': summary = `☀️ ${summary}`; break;
-      case 'AVOID_LIGHT': summary = `🕶️ ${summary}`; break;
-      case 'CAFFEINE': summary = `☕ ${summary}`; break;
-      case 'FLIGHT': summary = `✈️ ${summary}`; break;
-    }
-    
-    icsData += `SUMMARY:${summary}\n`;
-    icsData += `DESCRIPTION:Chrono Healer Jet Lag Itinerary\n`;
-    icsData += "END:VEVENT\n";
-  });
+const EVENT_EMOJI: Record<EventType, string> = {
+  SLEEP: '🛏️',
+  NAP: '🛋️',
+  SEEK_LIGHT: '☀️',
+  AVOID_LIGHT: '🕶️',
+  CAFFEINE: '☕',
+  MELATONIN: '💊',
+  MEAL: '🍽️',
+  FLIGHT: '✈️',
+};
 
-  icsData += "END:VCALENDAR";
-  return icsData;
+export function generateICS(events: JetLagEvent[], tripName = 'Jet Lag Protocol'): string {
+  const safeName = escapeICSText(`Chrono Healer - ${tripName}`);
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Chrono Healer//Jet Lag Calculator v2.0//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${safeName}`,
+  ];
+
+  const dtStamp = formatICSDate(new Date());
+
+  for (const event of events) {
+    const emoji = EVENT_EMOJI[event.type] || '📅';
+    const summary = escapeICSText(`${emoji} ${event.title || event.description}`);
+    const fullDescription = escapeICSText(
+      `${event.description}\n\nWhy this matters: ${event.explanation}`
+    );
+
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${event.id}-${event.startTime.getTime()}@chronohealer.local`,
+      `DTSTAMP:${dtStamp}`,
+      `DTSTART:${formatICSDate(event.startTime)}`,
+      `DTEND:${formatICSDate(event.endTime)}`,
+      `SUMMARY:${summary}`,
+      `DESCRIPTION:${fullDescription}`,
+      'BEGIN:VALARM',
+      'TRIGGER:-PT15M',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:${summary}`,
+      'END:VALARM',
+      'END:VEVENT'
+    );
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
 }

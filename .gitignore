@@ -5,21 +5,45 @@
 /.pnp
 .pnp.js
 
-# testing
+# testing & caches
 /coverage
+/.vitest/
+/playwright-report/
+/test-results/
 
-# next.js
+# next.js & typescript
 /.next/
 /out/
 build
+*.tsbuildinfo
+next-env.d.ts
 
-# misc
+# environment variables & local secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+
+# misc & OS
 .DS_Store
 *.pem
+*.swp
+*.swo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# editor & agent scratch directories
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.worktrees/
+worktrees/
+.superpowers/
 
 # workspace local installations
 .nvm/

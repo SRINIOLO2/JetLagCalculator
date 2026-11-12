@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chrono-healer-pwa-v2';
+const CACHE_NAME = 'chrono-healer-pwa-v2.1';
 const PRECACHE_URLS = ['./', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', event => {

@@ -50,6 +50,8 @@ import {
   Sparkles,
   Droplets,
   CheckCircle2,
+  ArrowLeftRight,
+  ChevronRight,
 } from 'lucide-react';
 
 type MobileTab = 'DECK' | 'TIMELINE' | 'PLANNER';
@@ -168,11 +170,12 @@ export default function Home() {
     return undefined;
   };
 
-  const handleFlightLookup = async () => {
-    if (!flightNumberQuery.trim()) return;
+  const executeFlightLookup = async (rawCode: string) => {
+    if (!rawCode.trim()) return;
+    setFlightNumberQuery(rawCode);
     setLookupStatus('Searching route...');
     const datePart = flight.departureTimeLocal.slice(0, 10);
-    const result = await lookupFlightNumber(flightNumberQuery, datePart);
+    const result = await lookupFlightNumber(rawCode, datePart);
     if (result) {
       const origLabel = formatAirportLabel(result.origin);
       const destLabel = formatAirportLabel(result.destination);
@@ -200,6 +203,28 @@ export default function Home() {
         'Flight not in offline presets — select Origin & Destination airports below.'
       );
     }
+  };
+
+  const handleSwapLocations = () => {
+    const prevOrigin = originInput;
+    const prevDest = destInput;
+    setOriginInput(prevDest);
+    setDestInput(prevOrigin);
+
+    const nextOriginTz = resolveTimezone(prevDest, flight.destinationTimezone);
+    const nextDestTz = resolveTimezone(prevOrigin, flight.originTimezone);
+    const nextOriginCode = extractIataCode(prevDest) || flight.destinationCode;
+    const nextDestCode = extractIataCode(prevOrigin) || flight.originCode;
+
+    const swappedFlight: FlightDetails = {
+      ...flight,
+      originTimezone: nextOriginTz,
+      destinationTimezone: nextDestTz,
+      originCode: nextOriginCode,
+      destinationCode: nextDestCode,
+    };
+    setFlight(swappedFlight);
+    setSchedule(generateJetLagSchedule(swappedFlight, prefs));
   };
 
   const handleGenerateAndSave = (e?: React.FormEvent) => {
@@ -315,23 +340,23 @@ export default function Home() {
   const getEventIcon = (type: JetLagEvent['type']) => {
     switch (type) {
       case 'SLEEP':
-        return <Moon size={20} className="icon moon" />;
+        return <Moon size={20} aria-hidden="true" className="icon moon" />;
       case 'NAP':
-        return <BedDouble size={20} className="icon nap" />;
+        return <BedDouble size={20} aria-hidden="true" className="icon nap" />;
       case 'SEEK_LIGHT':
-        return <Sun size={20} className="icon sun" />;
+        return <Sun size={20} aria-hidden="true" className="icon sun" />;
       case 'AVOID_LIGHT':
-        return <EyeOff size={20} className="icon avoid" />;
+        return <EyeOff size={20} aria-hidden="true" className="icon avoid" />;
       case 'CAFFEINE':
-        return <Coffee size={20} className="icon coffee" />;
+        return <Coffee size={20} aria-hidden="true" className="icon coffee" />;
       case 'MELATONIN':
-        return <Pill size={20} className="icon melatonin" />;
+        return <Pill size={20} aria-hidden="true" className="icon melatonin" />;
       case 'MEAL':
-        return <Utensils size={20} className="icon meal" />;
+        return <Utensils size={20} aria-hidden="true" className="icon meal" />;
       case 'FLIGHT':
-        return <Plane size={20} className="icon plane" />;
+        return <Plane size={20} aria-hidden="true" className="icon plane" />;
       default:
-        return <Calendar size={20} />;
+        return <Calendar size={20} aria-hidden="true" />;
     }
   };
 
@@ -391,7 +416,7 @@ export default function Home() {
         <div className="brand-row">
           <div className="brand-left">
             <div className="logo-badge">
-              <Plane size={22} className="logo-icon" />
+              <Plane size={22} aria-hidden="true" className="logo-icon" />
             </div>
             <div>
               <h1>Chrono Healer</h1>
@@ -400,7 +425,7 @@ export default function Home() {
           </div>
 
           <div className={`status-pill ${isOnline ? 'online' : 'offline'}`}>
-            {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
+            {isOnline ? <Wifi size={14} aria-hidden="true" /> : <WifiOff size={14} aria-hidden="true" />}
             <span>{isOnline ? 'Online Ready' : 'Airplane / Offline Mode'}</span>
           </div>
         </div>
@@ -408,7 +433,7 @@ export default function Home() {
         <div className="dual-clock-strip">
           <div className="clock-box">
             <span className="clock-label">
-              Origin ({flight.originCode || flight.originTimezone.split('/').pop()})
+              Origin · {flight.originCode || flight.originTimezone.split('/').pop()?.replace(/_/g, ' ')}
             </span>
             <strong className="clock-value">{originNowFormatted}</strong>
           </div>
@@ -416,26 +441,26 @@ export default function Home() {
             {phaseSummary.direction === 'NONE'
               ? 'Same Timezone'
               : `${Math.abs(phaseSummary.shiftHours)}h ${
-                  phaseSummary.direction === 'EAST' ? 'Eastward  advancing' : 'Westward delaying'
+                  phaseSummary.direction === 'EAST' ? 'Eastward Advance' : 'Westward Delay'
                 }`}
           </div>
           <div className="clock-box right">
             <span className="clock-label">
-              Destination ({flight.destinationCode || flight.destinationTimezone.split('/').pop()})
+              Dest · {flight.destinationCode || flight.destinationTimezone.split('/').pop()?.replace(/_/g, ' ')}
             </span>
             <strong className="clock-value accent-text">{destNowFormatted}</strong>
           </div>
         </div>
       </header>
 
-      {/* Mobile & Desktop Mode Switcher */}
+      {/* Primary Segmented Navigation Bar */}
       <nav className="mode-tabs" aria-label="App Views">
         <button
           type="button"
           className={`tab-btn ${activeTab === 'DECK' ? 'active' : ''}`}
           onClick={() => setActiveTab('DECK')}
         >
-          <Clock size={18} />
+          <Clock size={18} aria-hidden="true" />
           <span>Flight Deck</span>
         </button>
         <button
@@ -443,7 +468,7 @@ export default function Home() {
           className={`tab-btn ${activeTab === 'TIMELINE' ? 'active' : ''}`}
           onClick={() => setActiveTab('TIMELINE')}
         >
-          <Calendar size={18} />
+          <Calendar size={18} aria-hidden="true" />
           <span>Timeline ({schedule.length})</span>
         </button>
         <button
@@ -451,7 +476,7 @@ export default function Home() {
           className={`tab-btn ${activeTab === 'PLANNER' ? 'active' : ''}`}
           onClick={() => setActiveTab('PLANNER')}
         >
-          <Sparkles size={18} />
+          <Sparkles size={18} aria-hidden="true" />
           <span>Trip Setup</span>
         </button>
       </nav>
@@ -464,9 +489,20 @@ export default function Home() {
               <span className="live-dot-badge">
                 <span className="pulse-dot" /> LIVE CIRCADIAN GUIDANCE
               </span>
-              <button type="button" onClick={handleExportICS} className="btn-secondary compact">
-                <Calendar size={15} /> Export .ics
-              </button>
+              <div className="deck-header-actions">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('TIMELINE')}
+                  className="btn-secondary"
+                >
+                  <span>Full Schedule</span>
+                  <ChevronRight size={15} aria-hidden="true" />
+                </button>
+                <button type="button" onClick={handleExportICS} className="btn-secondary">
+                  <Calendar size={15} aria-hidden="true" />
+                  <span>Export .ics</span>
+                </button>
+              </div>
             </div>
 
             {activeEvents.length > 0 ? (
@@ -487,7 +523,8 @@ export default function Home() {
                     </div>
                     <p className="banner-desc">{ev.description}</p>
                     <p className="banner-science">
-                      <Info size={14} /> {ev.explanation}
+                      <Info size={15} aria-hidden="true" />
+                      <span>{ev.explanation}</span>
                     </p>
                   </div>
                 ))}
@@ -526,7 +563,7 @@ export default function Home() {
           {/* Mid-Flight Delay / Reroute Card */}
           <div className="glass-card delay-card">
             <div className="section-title-row">
-              <AlertTriangle size={20} className="warn-icon" />
+              <AlertTriangle size={20} aria-hidden="true" className="warn-icon" />
               <div>
                 <h2>Flight Delayed or Re-routed?</h2>
                 <p className="muted-sm">
@@ -586,7 +623,8 @@ export default function Home() {
 
             {delayNotice && (
               <p className="delay-feedback">
-                <CheckCircle2 size={15} /> {delayNotice}
+                <CheckCircle2 size={16} aria-hidden="true" />
+                <span>{delayNotice}</span>
               </p>
             )}
           </div>
@@ -594,7 +632,7 @@ export default function Home() {
           {/* In-Flight Essentials Checklist */}
           <div className="glass-card tips-card">
             <h2>
-              <Droplets size={18} /> Essential Flight Wellness Reminders
+              <Droplets size={18} aria-hidden="true" /> Essential Flight Wellness Reminders
             </h2>
             <ul className="tips-list">
               <li>
@@ -629,12 +667,13 @@ export default function Home() {
                 </p>
               </div>
               <button type="button" onClick={handleExportICS} className="btn-secondary">
-                <Calendar size={16} /> Add to Calendar (.ics)
+                <Calendar size={16} aria-hidden="true" />
+                <span>Add to Calendar (.ics)</span>
               </button>
             </div>
 
             {/* Horizontal Day Pills */}
-            <div className="day-pills-scroll">
+            <div className="day-pills-scroll" role="tablist" aria-label="Filter schedule by day">
               <button
                 type="button"
                 className={`day-pill ${selectedDayOffset === 'ALL' ? 'active' : ''}`}
@@ -703,9 +742,11 @@ export default function Home() {
                       <button
                         type="button"
                         className="why-btn"
+                        aria-expanded={isExpanded}
                         onClick={() => toggleExplanation(event.id)}
                       >
-                        <Info size={13} /> {isExpanded ? 'Hide science' : 'Why?'}
+                        <Info size={14} aria-hidden="true" />
+                        <span>{isExpanded ? 'Hide science' : 'Why this matters'}</span>
                       </button>
                     </div>
                     <h3>{event.title}</h3>
@@ -739,19 +780,24 @@ export default function Home() {
                   value={flightNumberQuery}
                   onChange={e => setFlightNumberQuery(e.target.value)}
                 />
-                <button type="button" className="btn-secondary" onClick={handleFlightLookup}>
-                  <Search size={16} /> Lookup
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => executeFlightLookup(flightNumberQuery)}
+                >
+                  <Search size={16} aria-hidden="true" />
+                  <span>Lookup</span>
                 </button>
               </div>
-              <div className="preset-chips">
+              <div className="preset-chips" role="group" aria-label="Popular Flight Presets">
                 {FLIGHT_ROUTE_PRESETS.slice(0, 6).map(p => (
                   <button
                     key={p.flightNumber}
                     type="button"
-                    className="mini-chip"
-                    onClick={() => {
-                      setFlightNumberQuery(p.flightNumber);
-                    }}
+                    className={`mini-chip ${
+                      flightNumberQuery.toUpperCase() === p.flightNumber ? 'active' : ''
+                    }`}
+                    onClick={() => executeFlightLookup(p.flightNumber)}
                   >
                     {p.flightNumber} ({p.originIata}→{p.destinationIata})
                   </button>
@@ -761,56 +807,77 @@ export default function Home() {
             </div>
 
             <form onSubmit={handleGenerateAndSave}>
-              <div className="input-group">
-                <label htmlFor="origin-tz-input">Origin Airport / City / Timezone</label>
-                <input
-                  id="origin-tz-input"
-                  list="locations-datalist"
-                  placeholder="Search IATA code or city (e.g. JFK, New York, Tokyo)"
-                  value={originInput}
-                  onChange={e => setOriginInput(e.target.value)}
-                />
-                <p className="feedback-text">
-                  <MapPin size={12} /> Resolved IANA Zone:{' '}
-                  {resolveTimezone(originInput, flight.originTimezone)}
-                </p>
+              <div className="location-pair-group">
+                <div className="input-group">
+                  <label htmlFor="origin-tz-input">Origin Airport / City / Timezone</label>
+                  <input
+                    id="origin-tz-input"
+                    list="locations-datalist"
+                    placeholder="Search IATA code or city (e.g. JFK, New York, Tokyo)"
+                    value={originInput}
+                    onChange={e => setOriginInput(e.target.value)}
+                  />
+                  <p className="feedback-text">
+                    <MapPin size={12} aria-hidden="true" />
+                    <span>
+                      IANA Zone: {resolveTimezone(originInput, flight.originTimezone)}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="swap-row">
+                  <button
+                    type="button"
+                    className="btn-secondary swap-btn"
+                    onClick={handleSwapLocations}
+                  >
+                    <ArrowLeftRight size={15} aria-hidden="true" />
+                    <span>Swap Origin & Destination</span>
+                  </button>
+                </div>
+
+                <div className="input-group">
+                  <label htmlFor="dest-tz-input">Destination Airport / City / Timezone</label>
+                  <input
+                    id="dest-tz-input"
+                    list="locations-datalist"
+                    placeholder="Search IATA code or city (e.g. LHR, London, HND)"
+                    value={destInput}
+                    onChange={e => setDestInput(e.target.value)}
+                  />
+                  <p className="feedback-text">
+                    <MapPin size={12} aria-hidden="true" />
+                    <span>
+                      IANA Zone: {resolveTimezone(destInput, flight.destinationTimezone)}
+                    </span>
+                  </p>
+                </div>
               </div>
 
-              <div className="input-group">
-                <label htmlFor="dep-datetime-input">Departure Date & Time (Local Origin Time)</label>
-                <input
-                  id="dep-datetime-input"
-                  type="datetime-local"
-                  value={flight.departureTimeLocal.slice(0, 16)}
-                  onChange={e => setFlight({ ...flight, departureTimeLocal: e.target.value })}
-                />
-              </div>
+              <div className="row datetime-row">
+                <div className="input-group half">
+                  <label htmlFor="dep-datetime-input">
+                    Departure (Local Origin Time)
+                  </label>
+                  <input
+                    id="dep-datetime-input"
+                    type="datetime-local"
+                    value={flight.departureTimeLocal.slice(0, 16)}
+                    onChange={e => setFlight({ ...flight, departureTimeLocal: e.target.value })}
+                  />
+                </div>
 
-              <div className="input-group">
-                <label htmlFor="dest-tz-input">Destination Airport / City / Timezone</label>
-                <input
-                  id="dest-tz-input"
-                  list="locations-datalist"
-                  placeholder="Search IATA code or city (e.g. LHR, London, HND)"
-                  value={destInput}
-                  onChange={e => setDestInput(e.target.value)}
-                />
-                <p className="feedback-text">
-                  <MapPin size={12} /> Resolved IANA Zone:{' '}
-                  {resolveTimezone(destInput, flight.destinationTimezone)}
-                </p>
-              </div>
-
-              <div className="input-group">
-                <label htmlFor="arr-datetime-input">
-                  Arrival Date & Time (Local Destination Time)
-                </label>
-                <input
-                  id="arr-datetime-input"
-                  type="datetime-local"
-                  value={flight.arrivalTimeLocal.slice(0, 16)}
-                  onChange={e => setFlight({ ...flight, arrivalTimeLocal: e.target.value })}
-                />
+                <div className="input-group half">
+                  <label htmlFor="arr-datetime-input">
+                    Arrival (Local Destination Time)
+                  </label>
+                  <input
+                    id="arr-datetime-input"
+                    type="datetime-local"
+                    value={flight.arrivalTimeLocal.slice(0, 16)}
+                    onChange={e => setFlight({ ...flight, arrivalTimeLocal: e.target.value })}
+                  />
+                </div>
               </div>
 
               <datalist id="locations-datalist">
@@ -854,10 +921,10 @@ export default function Home() {
                   }
                 >
                   <option value="PRE_FLIGHT">
-                    Start adjusting before departure (TimeShifter style — up to 3 days prior)
+                    Start adjusting before departure (up to 3 days prior)
                   </option>
                   <option value="ARRIVAL_ONLY">
-                    Adjust entirely upon departure/arrival (Best for short trips)
+                    Adjust entirely upon departure/arrival (short trips)
                   </option>
                 </select>
               </div>
@@ -882,7 +949,7 @@ export default function Home() {
                     checked={prefs.useMelatonin}
                     onChange={e => setPrefs({ ...prefs, useMelatonin: e.target.checked })}
                   />
-                  <div>
+                  <div className="toggle-text">
                     <strong>Include Melatonin</strong>
                     <span>0.5mg–3mg timed 45m before target sleep</span>
                   </div>
@@ -894,7 +961,7 @@ export default function Home() {
                     checked={prefs.useCaffeine}
                     onChange={e => setPrefs({ ...prefs, useCaffeine: e.target.checked })}
                   />
-                  <div>
+                  <div className="toggle-text">
                     <strong>Strategic Caffeine</strong>
                     <span>Morning alertness window + strict sleep cutoff</span>
                   </div>
@@ -910,18 +977,18 @@ export default function Home() {
           {/* Saved Trips Offline Drawer */}
           <aside className="saved-trips-section glass-card">
             <div className="section-title-row">
-              <Bookmark size={20} />
+              <Bookmark size={20} aria-hidden="true" />
               <div>
                 <h2>Saved Offline Trips</h2>
                 <p className="muted-sm">
-                  Stored on your phone so you can open or adjust them mid-flight without Wi-Fi.
+                  Stored on your device so you can open or adjust them mid-flight without Wi-Fi.
                 </p>
               </div>
             </div>
 
             {savedTrips.length === 0 ? (
               <p className="muted-sm">
-                No saved trips yet. Click &ldquo;Save Trip &amp; Open Flight Deck&rdquo; to store
+                No saved trips yet. Tap &ldquo;Save Trip &amp; Open Flight Deck&rdquo; to store
                 your itinerary for offline access.
               </p>
             ) : (
@@ -944,11 +1011,11 @@ export default function Home() {
                     </button>
                     <button
                       type="button"
-                      className="delete-trip-btn"
+                      className="delete-trip-btn icon-button"
                       aria-label={`Delete ${trip.name}`}
                       onClick={() => handleDeleteTrip(trip.id)}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={18} aria-hidden="true" />
                     </button>
                   </div>
                 ))}

@@ -29,8 +29,8 @@ This document defines the architectural invariants, module responsibilities, and
 | `src/utils/icsGenerator.ts` | RFC 5545 `.ics` generator with emoji prefixes, scientific explanations, and 15-minute `VALARM` reminders. |
 | `src/utils/tripStorage.ts` | Safe `localStorage` CRUD helper for persisting multiple itineraries offline (`loadSavedTrips`, `saveTrip`, `deleteTrip`). |
 | `src/components/ServiceWorkerRegistrar.tsx` | Registers `./sw.js` in the browser for offline Airplane Mode caching. |
-| `public/sw.js` | Stale-While-Revalidate Service Worker caching the app shell and static assets. |
-| `src/app/page.tsx` | Mobile-first 3-tab UI (`Flight Deck`, `Timeline`, `Trip Setup`) with live dual clocks and one-tap delay recalculation. |
+| `public/sw.js` | Network-First (HTML navigation) + Stale-While-Revalidate (static assets) Service Worker caching the app shell for offline Airplane Mode. |
+| `src/app/page.tsx` | Mobile-first 3-tab UI (`1. Plan Trip`, `2. Schedule`, `3. Flight Deck`) with expandable 4-lane swimlane timeline, dual clocks, and offline delay recalculation. |
 
 ---
 

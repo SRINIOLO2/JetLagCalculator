@@ -19,6 +19,7 @@ export interface FlightLookupResult {
   departureLocal: string; // "YYYY-MM-DDTHH:mm"
   arrivalLocal: string;   // "YYYY-MM-DDTHH:mm"
   source: 'online' | 'offline-preset';
+  timesEstimated?: boolean;
 }
 
 export const FLIGHT_ROUTE_PRESETS: FlightRoutePreset[] = [
@@ -86,6 +87,7 @@ export async function lookupFlightNumber(
               departureLocal: `${baseDate}T${depTime}`,
               arrivalLocal: `${arrDate}T${arrTime}`,
               source: 'online',
+              timesEstimated: !preset,
             };
           }
         }

@@ -246,18 +246,19 @@ export function generateJetLagSchedule(
         displayTimezone: displayTz,
       });
 
-      // Light exposure windows based on Phase Response Curve (PRC)
+      // Light exposure windows based on Phase Response Curve (PRC), non-overlapping with SLEEP
       if (isEastward) {
-        // Eastward (Phase Advance): Avoid light before core body temp minimum (2h before wake), Seek bright light upon wake (2.5h)
+        // Eastward (Phase Advance): Dim light / blue-blockers BEFORE early bedtime so endogenous
+        // melatonin rises smoothly without overlapping active sleep; Seek bright light upon wake.
         events.push({
           id: `avoid-light-${dayOffset}`,
           type: 'AVOID_LIGHT',
-          startTime: addMinutes(sleepEnd, -150),
-          endTime: sleepEnd,
-          title: 'Avoid Bright Light (Biological Late Night)',
-          description: 'Keep environment dark or wear blue-blocking glasses / eye mask before wake time.',
+          startTime: addMinutes(sleepStart, -90),
+          endTime: sleepStart,
+          title: 'Dim Lights & Blue-Blockers Before Sleep',
+          description: 'Keep environment dim or wear blue-blocking glasses / eye mask before target sleep onset.',
           explanation:
-            'Before your core body temperature minimum (Tmin), bright light delays your body clock—the opposite of what you need when flying east.',
+            'Bright light in your biological late evening suppresses melatonin and delays your clock—the opposite of what you need when flying east.',
           dayOffset,
           displayTimezone: displayTz,
         });
@@ -266,7 +267,7 @@ export function generateJetLagSchedule(
           id: `seek-light-${dayOffset}`,
           type: 'SEEK_LIGHT',
           startTime: sleepEnd,
-          endTime: addMinutes(sleepEnd, 150),
+          endTime: addMinutes(sleepEnd, 120),
           title: 'Seek Bright Morning Light',
           description: 'Get direct outdoor sunlight or high-lux bright light immediately after waking.',
           explanation:
@@ -279,7 +280,7 @@ export function generateJetLagSchedule(
         events.push({
           id: `seek-light-${dayOffset}`,
           type: 'SEEK_LIGHT',
-          startTime: addMinutes(sleepStart, -180),
+          startTime: addMinutes(sleepStart, -150),
           endTime: addMinutes(sleepStart, -30),
           title: 'Seek Evening Bright Light',
           description: 'Expose yourself to bright natural or indoor light in the hours leading up to bedtime.',
@@ -320,9 +321,24 @@ export function generateJetLagSchedule(
         });
       }
 
-      // Caffeine guidance (if enabled)
+      // Meal timing advice (Peripheral Clock Entrainment) — staggered before caffeine window
+      const breakfastStart = addMinutes(sleepEnd, 15);
+      events.push({
+        id: `meal-breakfast-${dayOffset}`,
+        type: 'MEAL',
+        startTime: breakfastStart,
+        endTime: addMinutes(breakfastStart, 45),
+        title: 'Anchor Meal (High-Protein Breakfast)',
+        description: 'Eat a protein-rich meal shortly after waking and hydrate with electrolytes.',
+        explanation:
+          'Peripheral clocks in your liver and digestive tract synchronize to feeding-fasting cycles. Eating at destination morning time anchors metabolic rhythms.',
+        dayOffset,
+        displayTimezone: displayTz,
+      });
+
+      // Caffeine guidance (if enabled) — starts at +60m after wake so Meal and Caffeine do not overlap
       if (prefs.useCaffeine) {
-        const cafStart = addMinutes(sleepEnd, 30);
+        const cafStart = addMinutes(sleepEnd, 60);
         const cafEnd = addMinutes(sleepEnd, 180);
         events.push({
           id: `caffeine-${dayOffset}`,
@@ -337,27 +353,23 @@ export function generateJetLagSchedule(
           displayTimezone: displayTz,
         });
       }
-
-      // Meal timing advice (Peripheral Clock Entrainment)
-      const breakfastStart = addMinutes(sleepEnd, 30);
-      events.push({
-        id: `meal-breakfast-${dayOffset}`,
-        type: 'MEAL',
-        startTime: breakfastStart,
-        endTime: addMinutes(breakfastStart, 60),
-        title: 'Anchor Meal (High-Protein Breakfast)',
-        description: 'Eat a protein-rich meal shortly after waking and hydrate with electrolytes.',
-        explanation:
-          'Peripheral clocks in your liver and digestive tract synchronize to feeding-fasting cycles. Eating at destination morning time anchors metabolic rhythms.',
-        dayOffset,
-        displayTimezone: displayTz,
-      });
     }
 
     // Strategic Nap if main sleep was truncated below 5 hours (300 mins) or completely overlapped by flight
     if (sleepTruncatedByFlight || actualSleepMins < 300) {
-      const napStart = addMinutes(sleepEnd, 300);
-      const napEnd = addMinutes(napStart, 30);
+      let napStart = addMinutes(sleepEnd, 300);
+      let napEnd = addMinutes(napStart, 30);
+
+      // Keep recovery nap clear of active boarding and landing buffers
+      if (isBefore(napStart, boardingEnd) && isAfter(napEnd, boardingStart)) {
+        napStart = boardingEnd;
+        napEnd = addMinutes(napStart, 30);
+      }
+      if (isBefore(napStart, landingEnd) && isAfter(napEnd, landingStart)) {
+        napStart = landingEnd;
+        napEnd = addMinutes(napStart, 30);
+      }
+
       events.push({
         id: `nap-${dayOffset}`,
         type: 'NAP',

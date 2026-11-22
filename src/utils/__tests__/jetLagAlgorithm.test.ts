@@ -112,4 +112,54 @@ describe('Multi-Pillar Circadian Algorithm & Delay Engine', () => {
     // Original arrival 06:00 GMT + 60m delay = 07:00 GMT = 08:00 CET (Europe/Paris)
     expect(rerouted.arrivalTimeLocal).toBe('2026-11-16T08:00');
   });
+
+  it('8. keeps Sleep and Light Control windows non-overlapping and staggers Cues without overlap', () => {
+    const westFlight: FlightDetails = {
+      flightNumber: 'BA117',
+      originCode: 'LHR',
+      destinationCode: 'JFK',
+      departureTimeLocal: '2026-11-15T08:25',
+      arrivalTimeLocal: '2026-11-15T11:10',
+      originTimezone: 'Europe/London',
+      destinationTimezone: 'America/New_York',
+    };
+
+    const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
+      aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
+
+    for (const flightCase of [baseFlight, westFlight]) {
+      const events = generateJetLagSchedule(flightCase, basePrefs);
+      const dayOffsets = Array.from(new Set(events.map(e => e.dayOffset)));
+
+      for (const d of dayOffsets) {
+        const dayEvents = events.filter(e => e.dayOffset === d);
+        const sleepOrNap = dayEvents.filter(e => e.type === 'SLEEP' || e.type === 'NAP');
+        const lightCues = dayEvents.filter(e => e.type === 'SEEK_LIGHT' || e.type === 'AVOID_LIGHT');
+        const fuelCues = dayEvents.filter(
+          e => e.type === 'MELATONIN' || e.type === 'MEAL' || e.type === 'CAFFEINE'
+        );
+
+        // Sleep/Nap blocks must never overlap Light control or each other
+        for (const s of sleepOrNap) {
+          for (const l of lightCues) {
+            expect(overlaps(s.startTime, s.endTime, l.startTime, l.endTime)).toBe(false);
+          }
+        }
+
+        // Fuel/Supplement cues on the same day must be staggered cleanly
+        for (let i = 0; i < fuelCues.length; i++) {
+          for (let j = i + 1; j < fuelCues.length; j++) {
+            expect(
+              overlaps(
+                fuelCues[i].startTime,
+                fuelCues[i].endTime,
+                fuelCues[j].startTime,
+                fuelCues[j].endTime
+              )
+            ).toBe(false);
+          }
+        }
+      }
+    }
+  });
 });
